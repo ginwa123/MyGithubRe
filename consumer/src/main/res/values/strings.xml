@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Consumer</string>
+    <string name="example">example</string>
+    <string name="image_user">imageUser</string>
+</resources>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">My Github Re</string>
+    <string name="following">Mengikuti</string>
+    <string name="followers">Pengikut</string>
+    <string name="bio">Bio</string>
+    <string name="example">contoh</string>
+    <string name="repositories">Repositori</string>
+    <string name="language">Pengaturan bahasa</string>
+    <string name="image_user">Image User</string>
+    <string name="githubUserSearch">Pencarian Pengguna Github</string>
+    <string name="this_user_has_no_followers">Pengguna ini tidak mempunyai pengikut</string>
+    <string name="this_user_are_not_following_anybody">Pengguna ini tidak mengikuti siapapun</string>
+    <string name="could_not_find_any_user_matching">Tidak dapat mencari pengguna dengan kata kunci</string>
+    <string name="add_user_to_favorite_list">Tambakan pengguna ke dalam daftar favorite</string>
+    <string name="settings">Pengaturan</string>
+    <string name="select_time">Pilih waktu</string>
+    <string name="reminder">Pengingat</string>
+    <string name="lets_find_user_again">Ayo cari pengguna lagi</string>
+    <string name="delete">Hapus</string>
+    <string name="from_list">Dari daftar</string>
+    <string name="undo">Kembali</string>
+    <string name="my_favorite_users">Pengguna Favoritku</string>
+</resources>

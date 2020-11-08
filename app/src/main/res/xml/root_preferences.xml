@@ -1,0 +1,18 @@
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+
+
+    <SwitchPreferenceCompat
+        app:defaultValue="false"
+        app:key="reminder"
+        app:title="Enable Reminder" />
+
+    <Preference
+        app:enabled="false"
+        app:key="time_reminder"
+        app:title="09:00 Am" />
+
+    <Preference
+        app:key="change_language"
+        app:summary="@string/language"
+        app:title="@string/language" />
+</PreferenceScreen>
