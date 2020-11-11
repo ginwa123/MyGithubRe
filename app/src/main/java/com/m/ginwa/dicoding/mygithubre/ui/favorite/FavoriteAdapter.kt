@@ -6,6 +6,8 @@ import android.view.View.GONE
 import android.view.View.VISIBLE
 import android.view.ViewGroup
 import androidx.core.os.bundleOf
+import androidx.paging.PagedListAdapter
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.bitmap.CenterCrop
@@ -16,13 +18,11 @@ import com.m.ginwa.dicoding.mygithubre.data.model.User
 import com.m.ginwa.dicoding.mygithubre.utils.RecyclerDeleteListener
 import com.m.ginwa.dicoding.mygithubre.utils.RecyclerViewClickListener
 import kotlinx.android.synthetic.main.list_user_favorite.view.*
-import javax.inject.Inject
 
-class FavoriteAdapter @Inject constructor() :
-    RecyclerView.Adapter<FavoriteAdapter.ViewHolder>() {
+class FavoriteAdapter(DIFF_CALLBACK: DiffUtil.ItemCallback<User>) :
+    PagedListAdapter<User, FavoriteAdapter.ViewHolder>(DIFF_CALLBACK) {
     private var recentDeleteDataPosition: Int? = null
     var recentDeleteData: User? = null
-    var dataSet = arrayListOf<User>()
     private var deleteListener: RecyclerDeleteListener? = null
     private var clickListener: RecyclerViewClickListener? = null
 
@@ -33,9 +33,6 @@ class FavoriteAdapter @Inject constructor() :
         return ViewHolder(view)
     }
 
-    override fun getItemCount(): Int {
-        return dataSet.size
-    }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         holder.load()
@@ -49,35 +46,18 @@ class FavoriteAdapter @Inject constructor() :
         clickListener = listener
     }
 
-    fun updateDataSet(dataSet: List<User>?) {
-        if (this.dataSet != dataSet && dataSet != null) {
-            this.dataSet.clear()
-            this.dataSet.addAll(dataSet)
-            notifyDataSetChanged()
-        }
-    }
-
     fun deleteData(adapterPosition: Int) {
-        recentDeleteData = dataSet[adapterPosition]
+        recentDeleteData = getItem(adapterPosition)
         recentDeleteDataPosition = adapterPosition
-        dataSet.removeAt(adapterPosition)
-        notifyItemRemoved(adapterPosition)
         deleteListener?.onDelete(recentDeleteDataPosition, recentDeleteData)
-    }
-
-    fun updateData(user: User?) {
-        user?.let {
-            dataSet.add(user)
-            notifyItemInserted(dataSet.lastIndex)
-        }
     }
 
     inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         fun load() {
-            dataSet[adapterPosition].let {
+            getItem(adapterPosition)?.let {
                 itemView.apply {
                     Glide.with(context)
-                        .load(dataSet[adapterPosition].avatarUrl)
+                        .load(getItem(adapterPosition)?.avatarUrl)
                         .apply {
                             transform(CenterCrop(), RoundedCorners(8))
                             override(60, 60)
@@ -100,4 +80,6 @@ class FavoriteAdapter @Inject constructor() :
             }
         }
     }
+
+
 }

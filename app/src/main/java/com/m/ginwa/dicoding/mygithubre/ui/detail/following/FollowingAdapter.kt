@@ -4,6 +4,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.os.bundleOf
+import androidx.paging.PagedListAdapter
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.bitmap.CenterCrop
@@ -13,12 +15,10 @@ import com.m.ginwa.dicoding.mygithubre.R
 import com.m.ginwa.dicoding.mygithubre.data.model.Following
 import com.m.ginwa.dicoding.mygithubre.utils.RecyclerViewClickListener
 import kotlinx.android.synthetic.main.list_user.view.*
-import javax.inject.Inject
 
-class FollowingAdapter @Inject constructor() :
-    RecyclerView.Adapter<FollowingAdapter.ViewHolder>() {
+class FollowingAdapter(DIFF_CALLBACK: DiffUtil.ItemCallback<Following>) :
+    PagedListAdapter<Following, FollowingAdapter.ViewHolder>(DIFF_CALLBACK) {
 
-    var dataSet = arrayListOf<Following>()
     private var clickListener: RecyclerViewClickListener? = null
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -26,9 +26,6 @@ class FollowingAdapter @Inject constructor() :
         return ViewHolder(view)
     }
 
-    override fun getItemCount(): Int {
-        return dataSet.size
-    }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         holder.load()
@@ -38,20 +35,12 @@ class FollowingAdapter @Inject constructor() :
         clickListener = listener
     }
 
-    fun updateDataSet(dataSet: List<Following>?) {
-        if (this.dataSet != dataSet && dataSet != null) {
-            this.dataSet.clear()
-            this.dataSet.addAll(dataSet)
-            notifyDataSetChanged()
-        }
-    }
-
     inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         fun load() {
-            dataSet[adapterPosition].let {
+            getItem(adapterPosition)?.let {
                 itemView.apply {
                     Glide.with(context)
-                        .load(dataSet[adapterPosition].avatarUrl)
+                        .load(getItem(adapterPosition)?.avatarUrl)
                         .apply {
                             transform(CenterCrop(), RoundedCorners(8))
                             override(60, 60)

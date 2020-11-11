@@ -6,7 +6,7 @@ import android.view.View.GONE
 import android.view.View.VISIBLE
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.Observer
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.navGraphViewModels
 import com.m.ginwa.dicoding.mygithubre.R
 import com.m.ginwa.dicoding.mygithubre.data.Result
@@ -15,6 +15,8 @@ import com.m.ginwa.dicoding.mygithubre.ui.ActivityViewModel
 import com.m.ginwa.dicoding.mygithubre.ui.MainActivity.Companion.showToast
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.android.synthetic.main.fragment_bio.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class BioFragment : Fragment(R.layout.fragment_bio) {
@@ -26,14 +28,13 @@ class BioFragment : Fragment(R.layout.fragment_bio) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        setUserProfile(detailViewModel.dataUser)
         loadUser()
         setSwipeUpListener()
     }
 
     private fun setSwipeUpListener() {
         swipeRefreshLayout.setOnRefreshListener { detailViewModel.swipeUpListener.value = true }
-        detailViewModel.swipeUpListener.observe(viewLifecycleOwner, Observer {
+        detailViewModel.swipeUpListener.observe(viewLifecycleOwner, {
             if (it != null && it) {
                 loadUser()
             }
@@ -43,9 +44,11 @@ class BioFragment : Fragment(R.layout.fragment_bio) {
     private fun loadUser() {
         detailViewModel.apply {
             isLoadUserComplete = false
-            getUser().observe(viewLifecycleOwner, Observer { result ->
+            getUser()
+            user.observe(viewLifecycleOwner, { result ->
                 when (result) {
                     is Result.Success -> {
+                        dataUser = result.data
                         setUserProfile(result.data)
                         activityViewModel.imageToolbarListener.value = result.data?.avatarUrl
                     }
@@ -56,7 +59,10 @@ class BioFragment : Fragment(R.layout.fragment_bio) {
                     Result.Loading -> activityViewModel.progressBarLive.value = true
                     Result.Complete -> {
                         errorOrComplete()
-                        activityViewModel.fabIconListener.value = dataUser
+                        lifecycleScope.launch {
+                            delay(1000)
+                            activityViewModel.fabIconListener.value = dataUser
+                        }
                     }
                 }
             })

@@ -10,6 +10,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.components.ApplicationComponent
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import javax.inject.Singleton
 
 @Module
@@ -34,10 +35,14 @@ object RoomModule {
     @Singleton
     @Provides
     fun provideUserDao(githubDatabase: GithubDatabase): UserDao = githubDatabase.userDao()
+
+    @Singleton
+    @Provides
+    fun dispatcher() = Dispatchers
 }
 
 @Database(
-    entities = [User::class, Following::class, Followers::class],
+    entities = [User::class, Following::class, Follower::class],
     version = 1,
     exportSchema = false
 )

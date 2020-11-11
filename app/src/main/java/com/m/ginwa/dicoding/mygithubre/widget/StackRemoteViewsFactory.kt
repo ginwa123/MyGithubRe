@@ -20,7 +20,7 @@ class StackRemoteViewsFactory @Inject constructor(
     private val userDao: UserDao
 ) :
     RemoteViewsService.RemoteViewsFactory {
-    val dataSet = arrayListOf<User>()
+    private val dataSet = arrayListOf<User>()
 
     override fun onCreate() {
 
@@ -32,7 +32,7 @@ class StackRemoteViewsFactory @Inject constructor(
 
     override fun onDataSetChanged() {
         runBlocking(Dispatchers.IO) {
-            userDao.getUserFavorite()?.let {
+            userDao.getUserFavoriteList(true).let {
                 val dataSet = arrayListOf<User>()
                 dataSet.addAll(it)
                 if (this@StackRemoteViewsFactory.dataSet != dataSet) {

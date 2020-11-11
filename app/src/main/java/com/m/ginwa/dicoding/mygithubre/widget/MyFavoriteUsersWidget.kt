@@ -44,7 +44,7 @@ class MyFavoriteUsersWidget : AppWidgetProvider() {
             if (intent?.action != null) {
                 if (intent.action == TOAST_ACTION) {
                     val message = intent.getStringExtra(EXTRA_ITEM)
-                    showToast(context, message)
+                    message?.let { it1 -> showToast(context, it1) }
                 }
             }
         }

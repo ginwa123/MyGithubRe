@@ -142,6 +142,9 @@ class SearchUserFragment : Fragment(R.layout.fragment_search_user) {
                         showToast(requireContext(), result.toString())
                     }
                     Result.Loading -> activityViewModel.progressBarLive.value = true
+                    Result.Complete -> {
+
+                    }
                 }
             })
         }

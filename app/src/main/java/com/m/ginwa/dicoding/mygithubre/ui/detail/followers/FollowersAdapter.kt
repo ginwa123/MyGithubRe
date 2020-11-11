@@ -4,29 +4,25 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.os.bundleOf
+import androidx.paging.PagedListAdapter
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.bitmap.CenterCrop
 import com.bumptech.glide.load.resource.bitmap.RoundedCorners
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.m.ginwa.dicoding.mygithubre.R
-import com.m.ginwa.dicoding.mygithubre.data.model.Followers
+import com.m.ginwa.dicoding.mygithubre.data.model.Follower
 import com.m.ginwa.dicoding.mygithubre.utils.RecyclerViewClickListener
 import kotlinx.android.synthetic.main.list_user.view.*
-import javax.inject.Inject
 
-class FollowersAdapter @Inject constructor() :
-    RecyclerView.Adapter<FollowersAdapter.ViewHolder>() {
-    var dataSet = arrayListOf<Followers>()
+class FollowersAdapter(DIFF_CALLBACK: DiffUtil.ItemCallback<Follower>) :
+    PagedListAdapter<Follower, FollowersAdapter.ViewHolder>(DIFF_CALLBACK) {
     private var clickListener: RecyclerViewClickListener? = null
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.list_user, parent, false)
         return ViewHolder(view)
-    }
-
-    override fun getItemCount(): Int {
-        return dataSet.size
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
@@ -37,21 +33,12 @@ class FollowersAdapter @Inject constructor() :
         clickListener = listener
     }
 
-    fun updateDataSet(dataSet: List<Followers>?) {
-        if (this.dataSet != dataSet && dataSet != null) {
-            this.dataSet.clear()
-            this.dataSet.addAll(dataSet)
-            notifyDataSetChanged()
-        }
-    }
-
-
     inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         fun load() {
-            dataSet[adapterPosition].let {
+            getItem(adapterPosition)?.let {
                 itemView.apply {
                     Glide.with(context)
-                        .load(dataSet[adapterPosition].avatarUrl)
+                        .load(getItem(adapterPosition)?.avatarUrl)
                         .apply {
                             transform(CenterCrop(), RoundedCorners(8))
                             override(60, 60)

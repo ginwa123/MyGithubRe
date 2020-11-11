@@ -6,12 +6,14 @@ import android.view.View.GONE
 import android.view.View.VISIBLE
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.Observer
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.navGraphViewModels
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.m.ginwa.dicoding.mygithubre.R
 import com.m.ginwa.dicoding.mygithubre.data.Result
+import com.m.ginwa.dicoding.mygithubre.data.model.Follower
 import com.m.ginwa.dicoding.mygithubre.ui.ActivityViewModel
 import com.m.ginwa.dicoding.mygithubre.ui.MainActivity.Companion.showToast
 import com.m.ginwa.dicoding.mygithubre.ui.detail.DetailViewModel
@@ -20,12 +22,13 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.android.synthetic.main.fragment_bio.swipeRefreshLayout
 import kotlinx.android.synthetic.main.fragment_followers.*
 import kotlinx.android.synthetic.main.recyclerview.*
-import javax.inject.Inject
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class FollowersFragment : Fragment(R.layout.fragment_followers) {
-    @Inject
-    lateinit var followersAdapter: FollowersAdapter
+
+    private lateinit var followersAdapter: FollowersAdapter
     private lateinit var viewManager: LinearLayoutManager
     private val detailViewModel: DetailViewModel by navGraphViewModels(R.id.nav_detail_graph) {
         defaultViewModelProviderFactory
@@ -40,13 +43,12 @@ class FollowersFragment : Fragment(R.layout.fragment_followers) {
     }
 
     private fun setAdapter() {
-        followersAdapter.updateDataSet(detailViewModel.dataSetFollowers)
+        followersAdapter = FollowersAdapter(diffCallback)
         followersAdapter.setOnRecyclerViewClick(object : RecyclerViewClickListener {
             override fun onClick(bundle: Bundle) {
                 findNavController().apply {
                     if (currentDestination?.id == R.id.detailUserFragment) {
                         activityViewModel.fabIconListener.value = null
-                        detailViewModel.dataSetFollowers = null
                         navigate(R.id.action_detailUserFragment_self, bundle)
                     }
                 }
@@ -63,7 +65,7 @@ class FollowersFragment : Fragment(R.layout.fragment_followers) {
 
     private fun setSwipeUpListener() {
         swipeRefreshLayout.setOnRefreshListener { detailViewModel.swipeUpListener.value = true }
-        detailViewModel.swipeUpListener.observe(viewLifecycleOwner, Observer {
+        detailViewModel.swipeUpListener.observe(viewLifecycleOwner, {
             if (it != null && it) {
                 loadFollowers()
             }
@@ -73,37 +75,53 @@ class FollowersFragment : Fragment(R.layout.fragment_followers) {
     private fun loadFollowers() {
         detailViewModel.apply {
             isLoadFollowersComplete = false
-            getFollowers().observe(viewLifecycleOwner, Observer { result ->
+            getFollowers()
+            followers.removeObservers(viewLifecycleOwner)
+            followers.observe(viewLifecycleOwner, { result ->
                 when (result) {
                     is Result.Success -> {
-                        result.data?.let { dataSet ->
-                            followersAdapter.updateDataSet(dataSet)
-                        }
+                        if (result.data.isNotEmpty()) followersAdapter.submitList(result.data)
                     }
                     is Result.Error -> {
                         showToast(requireContext(), result.toString())
                         errorOrComplete()
                     }
                     Result.Loading -> activityViewModel.progressBarLive.value = true
-                    Result.Complete -> {
-                        errorOrComplete()
-                    }
+                    Result.Complete -> errorOrComplete()
                 }
             })
         }
     }
 
     private fun errorOrComplete() {
-        detailViewModel.isLoadFollowersComplete = true
-        swipeRefreshLayout.isRefreshing = false
-        if (detailViewModel.isHideIndicator()) activityViewModel.progressBarLive.value = false
-        if (followersAdapter.dataSet.isEmpty()) textNoticeContainer.visibility = VISIBLE
-        else textNoticeContainer.visibility = GONE
+        lifecycleScope.launch {
+            delay(1000)
+            detailViewModel.isLoadFollowersComplete = true
+            swipeRefreshLayout.isRefreshing = false
+            if (detailViewModel.isHideIndicator()) activityViewModel.progressBarLive.value = false
+            if (followersAdapter.itemCount == 0) textNoticeContainer.visibility = VISIBLE
+            else textNoticeContainer.visibility = GONE
+        }
     }
 
     companion object {
         fun newInstance(): FollowersFragment =
             FollowersFragment()
+    }
+
+    private val diffCallback = object :
+        DiffUtil.ItemCallback<Follower>() {
+        // Concert details may have changed if reloaded from the database,
+        // but ID is fixed.
+        override fun areItemsTheSame(
+            oldFollower: Follower,
+            newFollower: Follower
+        ) = oldFollower.login == newFollower.login
+
+        override fun areContentsTheSame(
+            oldFollower: Follower,
+            newFollower: Follower
+        ) = oldFollower == newFollower
     }
 
 

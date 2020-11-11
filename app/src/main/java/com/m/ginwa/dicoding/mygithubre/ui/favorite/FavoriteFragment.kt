@@ -5,13 +5,13 @@ import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.snackbar.Snackbar
 import com.m.ginwa.dicoding.mygithubre.R
+import com.m.ginwa.dicoding.mygithubre.data.Result
 import com.m.ginwa.dicoding.mygithubre.data.model.User
 import com.m.ginwa.dicoding.mygithubre.ui.ActivityViewModel
 import com.m.ginwa.dicoding.mygithubre.utils.RecyclerDeleteListener
@@ -19,15 +19,12 @@ import com.m.ginwa.dicoding.mygithubre.utils.RecyclerViewClickListener
 import com.m.ginwa.dicoding.mygithubre.utils.SwipeToDelete
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.android.synthetic.main.recyclerview.*
-import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 @AndroidEntryPoint
 class FavoriteFragment : Fragment(R.layout.fragment_search_user) {
 
-    @Inject
-    lateinit var favoriteAdapter: FavoriteAdapter
 
+    private lateinit var favoriteAdapter: FavoriteAdapter
     private var snackBar: Snackbar? = null
     private lateinit var viewManager: LinearLayoutManager
     private val favoriteViewModel: FavoriteViewModel by viewModels()
@@ -41,14 +38,12 @@ class FavoriteFragment : Fragment(R.layout.fragment_search_user) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        lifecycleScope.launch { setAdapter() }
+        setAdapter()
     }
 
-    private suspend fun setAdapter() {
-        favoriteAdapter.updateDataSet(
-            favoriteViewModel.dataSet ?: favoriteViewModel.getUserFavoriteAsync().await()
-        )
-        favoriteViewModel.dataSet = favoriteViewModel.getUserFavoriteAsync().await()
+    private fun setAdapter() {
+        favoriteAdapter = FavoriteAdapter(diffCallback)
+        setData()
         val itemTouchHelper = ItemTouchHelper(SwipeToDelete(favoriteAdapter))
         favoriteAdapter.setOnRecyclerViewClick(object : RecyclerViewClickListener {
             override fun onClick(bundle: Bundle) {
@@ -64,7 +59,7 @@ class FavoriteFragment : Fragment(R.layout.fragment_search_user) {
                 adapterPosition: Int?,
                 user: User?
             ) {
-                updateUserIsFavorite(isFavorite = false, isScrollToBottom = false)
+                updateUserIsFavorite(isFavorite = false)
                 showUndoSnackBar(user)
             }
         })
@@ -79,6 +74,24 @@ class FavoriteFragment : Fragment(R.layout.fragment_search_user) {
         swipeRefreshLayout.isEnabled = false
     }
 
+    private fun setData() {
+        favoriteViewModel.getUserFavorite()
+        favoriteViewModel.dataSet.removeObservers(viewLifecycleOwner)
+        favoriteViewModel.dataSet.observe(viewLifecycleOwner, {
+            when (it) {
+                is Result.Success -> favoriteAdapter.submitList(it.data)
+                is Result.Error -> {
+
+                }
+                Result.Loading -> {
+
+                }
+                Result.Complete -> {
+                }
+            }
+        })
+    }
+
     private fun showUndoSnackBar(user: User?) {
         val message =
             "${getString(R.string.delete)} ${user?.login} ${getString(R.string.from_list)}"
@@ -87,9 +100,7 @@ class FavoriteFragment : Fragment(R.layout.fragment_search_user) {
             message,
             Snackbar.LENGTH_LONG
         )
-        snackBar?.setAction(getString(R.string.undo)) {
-            undo()
-        }
+        snackBar?.setAction(getString(R.string.undo)) { undo() }
         snackBar?.show()
     }
 
@@ -102,24 +113,31 @@ class FavoriteFragment : Fragment(R.layout.fragment_search_user) {
     private fun undo() {
         val user = favoriteAdapter.recentDeleteData
         user?.isFavorite = true
-        favoriteAdapter.updateData(user)
         updateUserIsFavorite(
-            isFavorite = true,
-            isScrollToBottom = true
+            isFavorite = true
         )
     }
 
-    private fun updateUserIsFavorite(isFavorite: Boolean, isScrollToBottom: Boolean) {
+    private fun updateUserIsFavorite(isFavorite: Boolean) {
         // update user
         val user = favoriteAdapter.recentDeleteData
         user?.isFavorite = isFavorite
         activityViewModel.insertUser(user)
-        if (isScrollToBottom) viewManager.smoothScrollToPosition(
-            recyclerView,
-            RecyclerView.State(),
-            favoriteAdapter.dataSet.lastIndex
-        )
     }
 
+    private val diffCallback = object :
+        DiffUtil.ItemCallback<User>() {
+        // Concert details may have changed if reloaded from the database,
+        // but ID is fixed.
+        override fun areItemsTheSame(
+            oldUser: User,
+            newUser: User
+        ) = oldUser.login == newUser.login
+
+        override fun areContentsTheSame(
+            oldUser: User,
+            newUser: User
+        ) = oldUser == newUser
+    }
 
 }

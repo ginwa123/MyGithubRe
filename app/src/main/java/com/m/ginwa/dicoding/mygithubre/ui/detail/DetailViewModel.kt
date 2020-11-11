@@ -3,21 +3,26 @@ package com.m.ginwa.dicoding.mygithubre.ui.detail
 import androidx.hilt.Assisted
 import androidx.hilt.lifecycle.ViewModelInject
 import androidx.lifecycle.*
+import androidx.paging.LivePagedListBuilder
+import androidx.paging.PagedList
 import com.m.ginwa.dicoding.mygithubre.data.Repository
 import com.m.ginwa.dicoding.mygithubre.data.Result
-import com.m.ginwa.dicoding.mygithubre.data.model.Followers
+import com.m.ginwa.dicoding.mygithubre.data.model.Follower
 import com.m.ginwa.dicoding.mygithubre.data.model.Following
 import com.m.ginwa.dicoding.mygithubre.data.model.User
-import kotlinx.coroutines.delay
+import com.m.ginwa.dicoding.mygithubre.utils.NetworkBound
+import kotlinx.coroutines.Dispatchers
 
 
 class DetailViewModel @ViewModelInject constructor(
     @Assisted private val savedStateHandle: SavedStateHandle,
-    private val repository: Repository
+    private val repository: Repository,
+    private val dispatcher: Dispatchers
 ) : ViewModel() {
 
-    var dataSetFollowers: List<Followers>? = null
-    var dataSetFollowing: List<Following>? = null
+    lateinit var followers: LiveData<Result<PagedList<Follower>>>
+    lateinit var user: LiveData<Result<User?>>
+    lateinit var followings: LiveData<Result<PagedList<Following>>>
     var dataUser: User? = null
     var login: String? = null
     var isLoadUserComplete = false
@@ -32,95 +37,98 @@ class DetailViewModel @ViewModelInject constructor(
         return false
     }
 
-    fun getFollowers(): LiveData<Result<List<Followers>?>> {
-        login?.let {
-            return liveData {
-                // read local first for fast load
-                delay(500)
-                val getFollowersLocal =
-                    repository.getFollowersUser(it, isReadRemote = false, isReadLocal = true)
-                when (getFollowersLocal) {
-                    is Result.Success -> dataSetFollowers = getFollowersLocal.data
-                }
-                emit(getFollowersLocal)
-                emit(Result.Loading)
-                // then read remote for update data
-                val getFollowersRemote =
-                    repository.getFollowersUser(it, isReadRemote = true, isReadLocal = false)
-                when (getFollowersRemote) {
-                    is Result.Success -> {
-                        getFollowersRemote.data?.forEach { followers -> followers.loginParent = it }
-                        dataSetFollowers = getFollowersRemote.data
-                        repository.insertFollowers(getFollowersRemote.data, it)
-                    }
-                }
-                emit(getFollowersRemote)
-                emit(Result.Complete)
+    @Suppress("UNCHECKED_CAST")
+    fun getFollowers() {
+        followers = object : NetworkBound<PagedList<Follower>>(viewModelScope, dispatcher) {
+            override fun loadFromDB(): LiveData<PagedList<Follower>> {
+                val factory = repository.getFollowersLocal(login ?: "")
+                return LivePagedListBuilder(factory, 5).build()
             }
-        }
-        return liveData { }
+
+            override fun alwaysLoadFromRemote(data: PagedList<Follower>?): Boolean {
+                return true
+            }
+
+            override suspend fun createCallRemote(data: PagedList<Follower>?) {
+                var error: Exception? = null
+                when (val resultRemote = repository.getFollowersRemote(login ?: "")) {
+                    is Result.Success -> {
+                        resultRemote.data?.forEach { it.loginParent = login ?: "" }
+                        insertOnCall(resultRemote.data)
+                    }
+                    is Result.Error -> error = resultRemote.exception
+                }
+                if (error != null) onFetchFailed(error)
+            }
+
+            override suspend fun insertOnCall(data: Any?) {
+                repository.insertFollowers(data as List<Follower>?, login ?: "")
+            }
+
+        }.asLiveData()
     }
 
-    fun getFollowings(): LiveData<Result<List<Following>?>> {
-        login?.let { it ->
-            return liveData {
-                // read local first for fast load
-                val getFollowingsLocal =
-                    repository.getFollowingsUser(it, isReadRemote = false, isReadLocal = true)
-                when (getFollowingsLocal) {
-                    is Result.Success -> dataSetFollowing = getFollowingsLocal.data
-                }
-                emit(getFollowingsLocal)
-                emit(Result.Loading)
-                // then read remote for update data in db
-                val getFollowingRemote =
-                    repository.getFollowingsUser(it, isReadRemote = true, isReadLocal = false)
-                when (getFollowingRemote) {
-                    is Result.Success -> {
-                        getFollowingRemote.data?.forEach { following -> following.loginParent = it }
-                        dataSetFollowing = getFollowingRemote.data
-                        repository.insertFollowings(getFollowingRemote.data, it)
-                    }
-                }
-                emit(getFollowingRemote)
-                emit(Result.Complete)
+    @Suppress("UNCHECKED_CAST")
+    fun getFollowings() {
+        followings = object : NetworkBound<PagedList<Following>>(viewModelScope, dispatcher) {
+            override fun loadFromDB(): LiveData<PagedList<Following>> {
+                val factory = repository.getFollowingLocal(login ?: "")
+                return LivePagedListBuilder(factory, 5).build()
             }
-        }
-        return liveData { }
+
+            override fun alwaysLoadFromRemote(data: PagedList<Following>?): Boolean {
+                return true
+            }
+
+            override suspend fun createCallRemote(data: PagedList<Following>?) {
+                var error: Exception? = null
+                when (val resultRemote = repository.getFollowingRemote(login ?: "")) {
+                    is Result.Success -> {
+                        resultRemote.data?.forEach { it.loginParent = login ?: "" }
+                        insertOnCall(resultRemote.data)
+                    }
+                    is Result.Error -> error = resultRemote.exception
+                }
+                if (error != null) onFetchFailed(error)
+            }
+
+            override suspend fun insertOnCall(data: Any?) {
+                if (data != null && login != null) {
+                    repository.insertFollowings(data as List<Following>?, login ?: "")
+                }
+            }
+
+        }.asLiveData()
     }
 
-    fun getUser(): LiveData<Result<User?>> {
-        login?.let {
-            return liveData {
-                // read local first for fast load
-                delay(500)
-                var isFavoriteUser = false
-                val userLocal = repository.getUser(it, isReadRemote = false, isReadLocal = true)
-                when (userLocal) {
-                    is Result.Success -> {
-                        userLocal.data?.let {
-                            isFavoriteUser = it.isFavorite
-                        }
-                    }
-                }
-                emit(userLocal)
-                emit(Result.Loading)
-                // then read remote for update data in db
-                val userRemote = repository.getUser(it, isReadRemote = true, isReadLocal = false)
-                when (userRemote) {
-                    is Result.Success -> {
-                        userRemote.data?.let {
-                            it.isFavorite = isFavoriteUser
-                            dataUser = it
-                            repository.insertUser(it)
-                        }
-                    }
-                }
-                emit(userRemote)
-                emit(Result.Complete)
+    fun getUser() {
+        user = object : NetworkBound<User?>(viewModelScope, dispatcher) {
+            override fun loadFromDB(): LiveData<User?> {
+                return repository.getUserLocal(login ?: "")
             }
-        }
-        return liveData { }
+
+            override fun alwaysLoadFromRemote(data: User?): Boolean {
+                return true
+            }
+
+            override suspend fun createCallRemote(data: User?) {
+                var error: Exception? = null
+                when (val resultRemote =
+                    repository.getUserRemote((data?.login ?: login).toString())) {
+                    is Result.Success -> {
+                        if (data != null) resultRemote.data?.isFavorite = data.isFavorite
+                        insertOnCall(resultRemote.data as Any)
+                    }
+                    is Result.Error -> error = resultRemote.exception
+                }
+                if (error != null) onFetchFailed(error)
+            }
+
+            override suspend fun insertOnCall(data: Any?) {
+                repository.insertUser(data as User)
+            }
+
+        }.asLiveData()
     }
 }
 

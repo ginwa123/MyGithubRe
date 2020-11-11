@@ -1,6 +1,6 @@
 package com.m.ginwa.dicoding.mygithubre.data
 
-import com.m.ginwa.dicoding.mygithubre.data.model.Followers
+import com.m.ginwa.dicoding.mygithubre.data.model.Follower
 import com.m.ginwa.dicoding.mygithubre.data.model.Following
 import com.m.ginwa.dicoding.mygithubre.data.model.SearchUser
 import com.m.ginwa.dicoding.mygithubre.data.model.User
@@ -23,7 +23,7 @@ interface RetrofitEndPoint {
 
     @Headers("Authorization: token $token")
     @GET("users/{username}/followers")
-    suspend fun followersUser(@Path("username") username: String): List<Followers>
+    suspend fun followersUser(@Path("username") username: String): List<Follower>
 
     @Headers("Authorization: token $token")
     @GET("users/{username}/following")

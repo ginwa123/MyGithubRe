@@ -79,8 +79,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
             val hour = sharedPreferences.getInt(CALENDAR_HOUR_OF_DAY, 9)
             val minute = sharedPreferences.getInt(CALENDAR_MINUTE, 0)
             val mTimePicker = TimePickerDialog(
-                requireContext(),
-                TimePickerDialog.OnTimeSetListener { _, selectedHour, selectedMinute ->
+                requireContext(), { _, selectedHour, selectedMinute ->
                     sharedPreferences.edit {
                         putInt(CALENDAR_HOUR_OF_DAY, selectedHour)
                         putInt(CALENDAR_MINUTE, selectedMinute)

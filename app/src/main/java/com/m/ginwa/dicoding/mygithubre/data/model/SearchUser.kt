@@ -57,7 +57,7 @@ data class User(
 
 
 @Entity
-data class Followers(
+data class Follower(
     @SerializedName("avatar_url")
     val avatarUrl: String?,
     @SerializedName("login")
